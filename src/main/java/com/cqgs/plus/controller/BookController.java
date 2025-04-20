@@ -1,7 +1,10 @@
 package com.cqgs.plus.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.cqgs.plus.dto.BorrowRecordDTO;
 import com.cqgs.plus.entity.Book;
 import com.cqgs.plus.entity.BookCategory;
+import com.cqgs.plus.entity.BorrowRecord;
 import com.cqgs.plus.service.BookService;
 import com.cqgs.plus.util.HttpResult;
 import lombok.Getter;
@@ -74,11 +77,34 @@ public class BookController {
         System.out.println(map);
         return HttpResult.successResult(map);
     }
+    @Setter
+    @Getter
+    public static class BorrowRequest {
+        // getter 和 setter
+        private String readerId;
+        private String bookId;
 
+    }
 
     @RequestMapping(value = "borrow", method = RequestMethod.POST)
-    public HttpResult borrow(@RequestParam("readerId") String readerId, @RequestParam("bookId") String bookId) {
-        bookService.borrowBook(bookId,readerId);
+    public HttpResult borrow(@RequestBody BorrowRequest request) {
+        bookService.borrowBook(request.getBookId(), request.getReaderId());
         return HttpResult.successResult("success");
     }
+
+    @RequestMapping(value = "return", method = RequestMethod.POST)
+    public HttpResult returnBook(@RequestBody BorrowRequest request) {
+        bookService.returnBook(request.getBookId(), request.getReaderId());
+        return HttpResult.successResult("success");
+    }
+
+    @RequestMapping(value = "record", method = RequestMethod.GET)
+    public HttpResult getRecord(
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "10") int pageSize) {
+
+        IPage<BorrowRecordDTO> borrowRecordPage = bookService.findBorrowRecord(pageNum, pageSize);
+        return HttpResult.successResult(borrowRecordPage);
+    }
+
 }

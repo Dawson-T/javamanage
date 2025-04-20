@@ -1,7 +1,10 @@
 package com.cqgs.plus.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.cqgs.plus.dto.BorrowRecordDTO;
 import com.cqgs.plus.entity.Book;
 import com.cqgs.plus.entity.BookCategory;
+import com.cqgs.plus.entity.BorrowRecord;
 import com.cqgs.plus.entity.Reader;
 
 import java.util.List;
@@ -31,4 +34,9 @@ public interface BookService {
 
 //    借书
     public void borrowBook(String bookId, String idCard);
+//    还书
+    public void returnBook(String bookId, String idCard);
+
+//    借书还书全部数据
+    public IPage<BorrowRecordDTO> findBorrowRecord(int pageNum, int pageSize);
 }

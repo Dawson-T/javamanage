@@ -1,6 +1,8 @@
 package com.cqgs.plus.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,7 +14,7 @@ import java.math.BigDecimal;
 @Getter
 @TableName("reader")
 public class Reader {
-    @TableField("reader_id")
+    @TableId(value = "reader_id", type = IdType.AUTO)
     private Integer readerId;
 
     private String Name;

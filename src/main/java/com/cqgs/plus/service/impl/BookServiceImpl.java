@@ -1,6 +1,9 @@
 package com.cqgs.plus.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cqgs.plus.dto.BorrowRecordDTO;
 import com.cqgs.plus.entity.Book;
 import com.cqgs.plus.entity.BookCategory;
 import com.cqgs.plus.entity.BorrowRecord;
@@ -10,6 +13,7 @@ import com.cqgs.plus.mapper.BookMapper;
 import com.cqgs.plus.mapper.BorrowRecordMapper;
 import com.cqgs.plus.mapper.ReaderMapper;
 import com.cqgs.plus.service.BookService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -253,8 +257,8 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-//  借书
-public void borrowBook(String bookId, String idCard) {
+    //  借书
+    public void borrowBook(String bookId, String idCard) {
     System.out.println("用户id " + idCard + "图书id" + bookId);
     // 1. 查询读者
     Reader reader = readerMapper.selectOne(new QueryWrapper<Reader>().eq("id_card", idCard));
@@ -268,6 +272,20 @@ public void borrowBook(String bookId, String idCard) {
         throw new RuntimeException("未找到该图书");
     }
 
+    //  判断是否有已经借了没还的
+        BorrowRecord temp = borrowRecordMapper.selectOne(
+                new QueryWrapper<BorrowRecord>()
+                        .eq("reader_id", reader.getReaderId())
+                        .eq("book_id", bookId)
+                        .isNull("return_time")  // 未归还
+        );
+
+        if (temp != null) {
+            throw new RuntimeException("您已借阅此书请勿重复借阅");
+        }
+
+
+
     // 3. 判断图书是否可借
     if (book.getStatus() != 2) {
         throw new RuntimeException(BookStatus.fromCode(book.getStatus()).getDescription());
@@ -276,7 +294,6 @@ public void borrowBook(String bookId, String idCard) {
     // 4. 更新图书状态
     book.setStatus(1);
     bookMapper.update(book, new QueryWrapper<Book>().eq("bookid", bookId));  // 根据bookId更新状态
-
     // 5. 添加借书记录
     BorrowRecord record = new BorrowRecord();
     System.out.println("书id："+ reader.getReaderId());
@@ -290,4 +307,88 @@ public void borrowBook(String bookId, String idCard) {
     borrowRecordMapper.insert(record);
 }
 
+    // 还书
+    public void returnBook(String bookId, String idCard) {
+        System.out.println("用户id " + idCard + " 归还图书id " + bookId);
+
+        // 1. 查询读者
+        Reader reader = readerMapper.selectOne(new QueryWrapper<Reader>().eq("id_card", idCard));
+        if (reader == null) {
+            throw new RuntimeException("未找到该读者");
+        }
+
+        // 2. 查询图书
+        Book book = bookMapper.selectById(bookId);
+        if (book == null) {
+            throw new RuntimeException("未找到该图书");
+        }
+
+        // 3. 查询借书记录（未归还的）
+        BorrowRecord record = borrowRecordMapper.selectOne(
+                new QueryWrapper<BorrowRecord>()
+                        .eq("reader_id", reader.getReaderId())
+                        .eq("book_id", bookId)
+                        .isNull("return_time")  // 未归还
+        );
+
+
+        if (record == null) {
+            throw new RuntimeException("未找到对应的借书记录，可能已归还或未借阅");
+        }
+
+        // 4. 设置归还时间为当前时间
+        record.setReturnTime(Timestamp.valueOf(LocalDateTime.now()));
+        record.setStatus(2);
+        borrowRecordMapper.updateById(record);
+
+        // 5. 更新图书状态为“可借”（状态码为2）
+        book.setStatus(2);
+        bookMapper.update(book, new QueryWrapper<Book>().eq("bookid", bookId));
+    }
+
+    public IPage<BorrowRecordDTO> findBorrowRecord(int pageNum, int pageSize) {
+        // 创建分页对象
+        Page<BorrowRecord> page = new Page<>(pageNum, pageSize);
+
+        // 创建排序条件，按借出时间降序排列
+        QueryWrapper<BorrowRecord> queryWrapper = new QueryWrapper<>();
+        queryWrapper.orderByDesc("borrow_time"); // "borrow_time" 为你实际的字段名，按时间降序排列
+
+        // 查询数据并分页
+        IPage<BorrowRecord> borrowPage = borrowRecordMapper.selectPage(page, queryWrapper);
+
+        // 将 BorrowRecord 转换为 BorrowRecordDTO 并补充信息
+        List<BorrowRecordDTO> dtoList = borrowPage.getRecords().stream().map(record -> {
+            BorrowRecordDTO dto = new BorrowRecordDTO();
+            BeanUtils.copyProperties(record, dto);
+
+            // 查询图书名
+            Book book = bookMapper.selectById(record.getBookId());
+            if (book != null) {
+                dto.setBookName(book.getTitle());
+            }
+
+            // 查询读者信息
+            Reader reader = readerMapper.selectById(record.getReaderId());
+            System.out.println("record.getRecordId()"+record.getReaderId()+"reader"+reader);
+            if (reader != null) {
+                dto.setReaderName(reader.getName());
+                dto.setReaderPhone(reader.getPhone());
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
+
+        // 构建新的分页对象返回
+        Page<BorrowRecordDTO> dtoPage = new Page<>();
+        dtoPage.setCurrent(borrowPage.getCurrent());
+        dtoPage.setSize(borrowPage.getSize());
+        dtoPage.setTotal(borrowPage.getTotal());
+        dtoPage.setRecords(dtoList);
+
+        return dtoPage;
+    }
+
 }
+
+

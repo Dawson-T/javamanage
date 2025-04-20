@@ -16,8 +16,10 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         // 配置拦截器，拦截 /user/** 路径下的所有请求
         registry.addInterceptor(tokenInterceptor)
-                .addPathPatterns("/user/**")  // 拦截 /user/** 下的所有请求
+                .addPathPatterns("/user/**")   // 拦截 /user/** 下的所有请求
                 .addPathPatterns("/books/**")
-                .excludePathPatterns("/user/login", "/user/register"); // 排除登录和注册接口
+                .excludePathPatterns("/user/login", "/user/register")// 排除登录和注册接口
+                .excludePathPatterns("/books/borrow")
+                .excludePathPatterns("/books/return");
     }
 }
