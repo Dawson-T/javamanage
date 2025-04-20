@@ -74,11 +74,24 @@ public class BookController {
         System.out.println(map);
         return HttpResult.successResult(map);
     }
+    @Setter
+    @Getter
+    public static class BorrowRequest {
+        // getter 和 setter
+        private String readerId;
+        private String bookId;
 
+    }
 
     @RequestMapping(value = "borrow", method = RequestMethod.POST)
-    public HttpResult borrow(@RequestParam("readerId") String readerId, @RequestParam("bookId") String bookId) {
-        bookService.borrowBook(bookId,readerId);
+    public HttpResult borrow(@RequestBody BorrowRequest request) {
+        bookService.borrowBook(request.getBookId(), request.getReaderId());
+        return HttpResult.successResult("success");
+    }
+
+    @RequestMapping(value = "return", method = RequestMethod.POST)
+    public HttpResult returnBook(@RequestBody BorrowRequest request) {
+        bookService.returnBook(request.getBookId(), request.getReaderId());
         return HttpResult.successResult("success");
     }
 }

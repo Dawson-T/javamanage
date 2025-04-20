@@ -253,8 +253,8 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-//  借书
-public void borrowBook(String bookId, String idCard) {
+    //  借书
+    public void borrowBook(String bookId, String idCard) {
     System.out.println("用户id " + idCard + "图书id" + bookId);
     // 1. 查询读者
     Reader reader = readerMapper.selectOne(new QueryWrapper<Reader>().eq("id_card", idCard));
@@ -268,6 +268,20 @@ public void borrowBook(String bookId, String idCard) {
         throw new RuntimeException("未找到该图书");
     }
 
+    //  判断是否有已经借了没还的
+        BorrowRecord temp = borrowRecordMapper.selectOne(
+                new QueryWrapper<BorrowRecord>()
+                        .eq("reader_id", reader.getReaderId())
+                        .eq("book_id", bookId)
+                        .isNull("return_time")  // 未归还
+        );
+
+        if (temp != null) {
+            throw new RuntimeException("您已借阅此书请勿重复借阅");
+        }
+
+
+
     // 3. 判断图书是否可借
     if (book.getStatus() != 2) {
         throw new RuntimeException(BookStatus.fromCode(book.getStatus()).getDescription());
@@ -276,7 +290,6 @@ public void borrowBook(String bookId, String idCard) {
     // 4. 更新图书状态
     book.setStatus(1);
     bookMapper.update(book, new QueryWrapper<Book>().eq("bookid", bookId));  // 根据bookId更新状态
-
     // 5. 添加借书记录
     BorrowRecord record = new BorrowRecord();
     System.out.println("书id："+ reader.getReaderId());
@@ -290,4 +303,44 @@ public void borrowBook(String bookId, String idCard) {
     borrowRecordMapper.insert(record);
 }
 
+    // 还书
+    public void returnBook(String bookId, String idCard) {
+        System.out.println("用户id " + idCard + " 归还图书id " + bookId);
+
+        // 1. 查询读者
+        Reader reader = readerMapper.selectOne(new QueryWrapper<Reader>().eq("id_card", idCard));
+        if (reader == null) {
+            throw new RuntimeException("未找到该读者");
+        }
+
+        // 2. 查询图书
+        Book book = bookMapper.selectById(bookId);
+        if (book == null) {
+            throw new RuntimeException("未找到该图书");
+        }
+
+        // 3. 查询借书记录（未归还的）
+        BorrowRecord record = borrowRecordMapper.selectOne(
+                new QueryWrapper<BorrowRecord>()
+                        .eq("reader_id", reader.getReaderId())
+                        .eq("book_id", bookId)
+                        .isNull("return_time")  // 未归还
+        );
+
+
+        if (record == null) {
+            throw new RuntimeException("未找到对应的借书记录，可能已归还或未借阅");
+        }
+
+        // 4. 设置归还时间为当前时间
+        record.setReturnTime(Timestamp.valueOf(LocalDateTime.now()));
+        record.setStatus(2);
+        borrowRecordMapper.updateById(record);
+
+        // 5. 更新图书状态为“可借”（状态码为2）
+        book.setStatus(2);
+        bookMapper.update(book, new QueryWrapper<Book>().eq("bookid", bookId));
+    }
 }
+
+

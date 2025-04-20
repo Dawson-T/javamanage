@@ -31,4 +31,6 @@ public interface BookService {
 
 //    借书
     public void borrowBook(String bookId, String idCard);
+
+    public void returnBook(String bookId, String idCard);
 }
