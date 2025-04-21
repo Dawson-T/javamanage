@@ -25,9 +25,12 @@ public class BookController {
 
 
     @RequestMapping(value = "list", method = RequestMethod.GET)
-    public HttpResult list(){
+    public HttpResult list(@RequestParam(defaultValue = "1") int pageNum,
+                           @RequestParam(defaultValue = "10") int pageSize,
+                           Book params
+                           ){
         System.out.println("查询所有书籍信息");
-        List<Book> bookInfoList = bookService.findBooks();
+        IPage<Book> bookInfoList = bookService.findBooks(pageNum, pageSize,params);
         return HttpResult.successResult(bookInfoList);
     }
 

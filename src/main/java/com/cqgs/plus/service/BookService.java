@@ -12,7 +12,7 @@ import java.util.Map;
 
 public interface BookService {
     //查询所有书籍
-    public List<Book> findBooks();
+    public IPage<Book> findBooks(int pageNum,int pageSize,Book params);
 
     //添加书籍
     public void addBookInfo(Book bookInfo);

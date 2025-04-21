@@ -1,5 +1,6 @@
 package com.cqgs.plus.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -40,9 +41,39 @@ public class BookServiceImpl implements BookService {
     @Autowired
     private ReaderMapper readerMapper;
 //    @Override
-    public List<Book> findBooks(){
-        return bookMapper.selectList(null);
+public IPage<Book> findBooks(int pageNum, int pageSize, Book params) {
+    Page<Book> page = new Page<>(pageNum, pageSize);
+    LambdaQueryWrapper<Book> queryWrapper = new LambdaQueryWrapper<>();
+
+    if (params != null) {
+        if (params.getTitle() != null && !params.getTitle().isEmpty()) {
+            queryWrapper.like(Book::getTitle, params.getTitle());
+        }
+        if (params.getAuthor() != null && !params.getAuthor().isEmpty()) {
+            queryWrapper.like(Book::getAuthor, params.getAuthor());
+        }
+        if (params.getIsbn() != null && !params.getIsbn().isEmpty()) {
+            queryWrapper.eq(Book::getIsbn, params.getIsbn());
+        }
+        if (params.getPrice() != null) {
+            queryWrapper.eq(Book::getPrice, params.getPrice());
+        }
+        if (params.getCategoryid() != null) {
+            queryWrapper.eq(Book::getCategoryid, params.getCategoryid());
+        }
+        if (params.getStatus() != null) {
+            queryWrapper.eq(Book::getStatus, params.getStatus());
+        }
+        if (params.getIsActive() != null) {
+            queryWrapper.eq(Book::getIsActive, params.getIsActive());
+        }
     }
+
+    queryWrapper.orderByDesc(Book::getUpdatetime);
+
+    return bookMapper.selectPage(page, queryWrapper);
+}
+
 
     //添加书籍
     public void addBookInfo(Book bookInfo){
@@ -153,28 +184,7 @@ public class BookServiceImpl implements BookService {
         }
 
         // 统计 status 分组的数量
-        Map<Integer, Integer> statusCountMap = new HashMap<>();
-        for (BorrowRecord record : allRecords) {
-            Integer status = record.getStatus();
-            if (status != null) {
-                statusCountMap.put(status, statusCountMap.getOrDefault(status, 0) + 1);
-            }
-        }
-
-        List<Map<String, Object>> statusStats = new ArrayList<>();
-        for (Map.Entry<Integer, Integer> entry : statusCountMap.entrySet()) {
-            Integer status = entry.getKey();
-            Integer count = entry.getValue();
-            double percent = totalCount > 0 ? count * 100.0 / totalCount : 0;
-
-            Map<String, Object> statusInfo = new HashMap<>();
-            statusInfo.put("status", status);
-            statusInfo.put("label", getStatusLabel(status)); // 显示中文标签
-            statusInfo.put("count", count);
-            statusInfo.put("percentage", String.format("%.1f", percent));
-
-            statusStats.add(statusInfo);
-        }
+        List<Map<String, Object>> statusStats = getMaps(allRecords, totalCount);
         Map<Integer, Integer> categoryCountMap = new HashMap<>();
 //        前五分类的书籍类型
         List<Book> books=  bookMapper.selectList(null);
@@ -212,6 +222,32 @@ public class BookServiceImpl implements BookService {
         result.put("statusStats", statusStats);
         result.put("categoryCountMap", temp);
         return result;
+    }
+
+    private List<Map<String, Object>> getMaps(List<BorrowRecord> allRecords, int totalCount) {
+        Map<Integer, Integer> statusCountMap = new HashMap<>();
+        for (BorrowRecord record : allRecords) {
+            Integer status = record.getStatus();
+            if (status != null) {
+                statusCountMap.put(status, statusCountMap.getOrDefault(status, 0) + 1);
+            }
+        }
+
+        List<Map<String, Object>> statusStats = new ArrayList<>();
+        for (Map.Entry<Integer, Integer> entry : statusCountMap.entrySet()) {
+            Integer status = entry.getKey();
+            Integer count = entry.getValue();
+            double percent = totalCount > 0 ? count * 100.0 / totalCount : 0;
+
+            Map<String, Object> statusInfo = new HashMap<>();
+            statusInfo.put("status", status);
+            statusInfo.put("label", getStatusLabel(status)); // 显示中文标签
+            statusInfo.put("count", count);
+            statusInfo.put("percentage", String.format("%.1f", percent));
+
+            statusStats.add(statusInfo);
+        }
+        return statusStats;
     }
 
     private String getStatusLabel(int status) {

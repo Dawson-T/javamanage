@@ -1,6 +1,7 @@
 package com.cqgs.plus.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
@@ -20,7 +21,8 @@ public class Book {
     private Integer price;
     private Integer categoryid;
     private Integer status;
-
+    @TableField("isActive")
+    private Integer isActive;
     private Date createtime;
     private Date updatetime;
 
